@@ -1,0 +1,9 @@
+Required Plugins:
+
+- ANSI Color
+- Credentials Binding
+- Email Extension
+- GitHub
+- Job DSL
+- Sidebar Links
+- Workspace Cleanup
