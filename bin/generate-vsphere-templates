@@ -1,0 +1,106 @@
+#!/bin/bash
+
+# This script generates DSLs to build vSphere templates using Packer.
+
+set -e
+set -o pipefail
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}"  )" && cd "../" && pwd  )"
+
+generate_dsl() {
+	local name=$1
+	rname=${name//-/_}
+	local job_name="vsphere_template_${rname}"
+	local display_name="vsphere-template-${name}"
+	file="${DIR}/projects/vsphere-templates/${rname//./_}.groovy"
+
+	echo "${file} | ${name}"
+
+	cat <<-EOF > "$file"
+freeStyleJob('${job_name}') {
+    displayName('${display_name}')
+    description('Build the ${name} vSphere Template')
+    label('linux')
+
+    checkoutRetryCount(3)
+
+    properties {
+        githubProjectUrl('https://github.com/nickcharlton/esxi-infrastructure')
+    }
+
+    logRotator {
+        numToKeep(100)
+        daysToKeep(15)
+    }
+
+    scm {
+        git {
+            remote {
+                url('git@github.com:nickcharlton/esxi-infrastructure.git')
+                credentials('github-ssh-key')
+            }
+            branches('master')
+            extensions {
+                disableRemotePoll()
+                wipeOutWorkspace()
+                cleanAfterCheckout()
+            }
+        }
+    }
+
+    triggers {
+        cron('H 12 1 1-12 *') // run every month, on the 1st, at 12am
+    }
+
+    wrappers {
+      colorizeOutput()
+
+      credentialsBinding { 
+        usernamePassword('VSPHERE_USERNAME', 'VSPHERE_PASSWORD', 'vsphere_user')
+      }
+    }
+
+    environmentVariables(
+      VSPHERE_HOST: 'vsphere.nullgrid.net',
+      ESXI_HOST: 'esxi.nullgrid.net',
+      ESXI_DATASTORE: 'primary'
+    )
+
+    steps {
+        shell("packer build -force ${name}.json")
+    }
+
+    publishers {
+        extendedEmail {
+            recipientList('\$DEFAULT_RECIPIENTS')
+            contentType('text/plain')
+            triggers {
+                stillFailing {
+                    attachBuildLog(true)
+                }
+            }
+        }
+
+        wsCleanup()
+    }
+}
+EOF
+}
+
+main() {
+	rm -rf "$DIR/projects/vsphere-templates"
+	mkdir -p "$DIR/projects/vsphere-templates"
+
+	repos=(
+		debian-10
+		ubuntu-1804
+	)
+
+	echo "FILE | TEMPLATE"
+
+	for r in "${repos[@]}"; do
+		generate_dsl "${r}"
+	done
+}
+
+main
