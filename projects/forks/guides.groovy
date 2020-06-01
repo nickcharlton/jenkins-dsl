@@ -21,6 +21,7 @@ freeStyleJob('update_fork_guides') {
             remote {
                 url('git@github.com:nickcharlton/guides.git')
                 name('origin')
+                credentials('github-ssh-key')
                 refspec('+refs/heads/master:refs/remotes/origin/master')
             }
             remote {

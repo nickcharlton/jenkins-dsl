@@ -21,6 +21,7 @@ freeStyleJob('update_fork_things_scripts') {
             remote {
                 url('git@github.com:nickcharlton/things-scripts.git')
                 name('origin')
+                credentials('github-ssh-key')
                 refspec('+refs/heads/master:refs/remotes/origin/master')
             }
             remote {

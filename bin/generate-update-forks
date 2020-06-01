@@ -75,6 +75,7 @@ freeStyleJob('update_fork_${rname//./_}') {
             remote {
                 url('git@github.com:${forked_repo}.git')
                 name('origin')
+                credentials('github-ssh-key')
                 refspec('+refs/heads/${primary_branch}:refs/remotes/origin/${primary_branch}')
             }
             remote {
